@@ -1,0 +1,3 @@
+C:/Users/cezar/AI/Homework_1/cmake-build-debug/CMakeFiles/Homework_1.dir
+C:/Users/cezar/AI/Homework_1/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/cezar/AI/Homework_1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
