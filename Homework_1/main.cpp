@@ -1,6 +1,9 @@
 #include <bits/stdc++.h>
 
 
+///////////////////////////////////////// 1
+/// Representation of the problem state
+
 struct Transition {
     std::pair<int, int> from, to;
 };
@@ -16,6 +19,19 @@ struct State {
                   m[T.to.first][T.to.second]);
     }
 };
+
+///////////////////////////////////////// 2
+/// Initialization function, pass instance, get state
+
+[[nodiscard]] constexpr State getStateFromProblemInstance(std::span<int, 9> instance) {
+    State state{.lastMoved{-1, -1}};
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            state.m[i][j] = instance[i * 3 + j];
+        }
+    }
+    return state;
+}
 
 [[nodiscard]] constexpr auto getSolutionForEmptyPos(int x, int y) noexcept {
     matrix m{};
@@ -48,11 +64,17 @@ void printSolution(const matrix &m) {
 
 constexpr auto solutions = getFinalSolutions();
 
-[[nodiscard]] constexpr bool isFinalSolution(const matrix &sol) noexcept {
+/// Check state is final
+
+[[nodiscard]] constexpr bool isFinalState(const State &sol) noexcept {
     return std::ranges::any_of(solutions, [sol](matrix x) {
-        return x == sol;
+        return x == sol.m;
     });
 }
+
+///////////////////////////////////////// 3
+
+/// Transition validation
 
 [[nodiscard]] constexpr bool inMatrix(std::pair<int, int> pos) noexcept {
     return pos.first >= 0 && pos.first < 3 && pos.second >= 0 && pos.second < 3;
@@ -64,6 +86,8 @@ constexpr auto solutions = getFinalSolutions();
            && (S.m[T.from.first][T.from.second] == 0 || S.m[T.to.first][T.to.second] == 0);
 }
 
+/// Function that gets state & transition parameters and returns a new state
+
 [[nodiscard]] constexpr State getNewState(const State &S, const Transition &T) noexcept {
     assert(isValidTransition(S, T));
     State newState = S;
@@ -71,9 +95,11 @@ constexpr auto solutions = getFinalSolutions();
     return newState;
 }
 
+///////////////////////////////////////// 4
+
+
 int main() {
-    for (auto sol: solutions)
-        printSolution(sol);
+
 
     return 0;
 }
