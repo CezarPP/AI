@@ -10,15 +10,45 @@ struct Transition {
 
 using matrix = std::array<std::array<int, 3>, 3>;
 
+// Boost::hash_combine
+template<typename T>
+constexpr void hash_combine(size_t &seed, T const &v) {
+    seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
 struct State {
     matrix m;
     std::pair<int, int> lastMoved;
+
+    [[nodiscard]] std::size_t hash() const {
+        std::size_t result = 0;
+
+        for (const auto &row: m)
+            for (const auto &value: row)
+                hash_combine(result, value);
+
+        hash_combine(result, lastMoved.first);
+        hash_combine(result, lastMoved.second);
+
+        return result;
+    }
+
 
     void applyTransition(const Transition &T) {
         std::swap(m[T.from.first][T.from.second],
                   m[T.to.first][T.to.second]);
     }
 };
+
+// Define a custom function specialization in std for std::unordered_set to work
+namespace std {
+    template<>
+    struct hash<State> {
+        std::size_t operator()(const State &s) const {
+            return s.hash();
+        }
+    };
+}
 
 ///////////////////////////////////////// 2
 /// Initialization function, pass instance, get state
@@ -97,6 +127,7 @@ constexpr auto solutions = getFinalSolutions();
 
 ///////////////////////////////////////// 4
 
+std::unordered_set<State> visited;
 
 int main() {
 
