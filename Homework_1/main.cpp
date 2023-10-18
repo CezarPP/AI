@@ -125,6 +125,24 @@ constexpr auto solutions = getFinalSolutions();
     return newState;
 }
 
+[[nodiscard]] constexpr std::vector<State> getReachableStates(const State &s) noexcept {
+    std::vector<State> v;
+    std::pair<int, int> zeroPos;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            if (s.m[i][j] == 0)
+                zeroPos = {i, j};
+    const std::array<int, 4> dx = {1, -1, 0, 0};
+    const std::array<int, 4> dy = {0, 0, 1, -1};
+    for (int i = 0; i < 4; i++) {
+        int newX = zeroPos.first + dx[i], newY = zeroPos.second + dy[i];
+        auto transition = Transition{.from = zeroPos, .to = {newX, newY}};
+        if (isValidTransition(s, transition))
+            v.push_back(getNewState(s, transition));
+    }
+    return v;
+}
+
 ///////////////////////////////////////// 4
 
 std::unordered_set<State> visited;
