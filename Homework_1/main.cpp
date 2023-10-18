@@ -33,10 +33,13 @@ struct State {
         return result;
     }
 
-
     void applyTransition(const Transition &T) {
         std::swap(m[T.from.first][T.from.second],
                   m[T.to.first][T.to.second]);
+    }
+
+    bool operator==(const State &rhs) const {
+        return m == rhs.m && lastMoved == rhs.lastMoved;
     }
 };
 
@@ -53,7 +56,7 @@ namespace std {
 ///////////////////////////////////////// 2
 /// Initialization function, pass instance, get state
 
-[[nodiscard]] constexpr State getStateFromProblemInstance(std::span<int, 9> instance) {
+[[nodiscard]] constexpr State getStateFromProblemInstance(const std::span<int, 9> instance) {
     State state{.lastMoved{-1, -1}};
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
@@ -143,11 +146,66 @@ constexpr auto solutions = getFinalSolutions();
     return v;
 }
 
+[[nodiscard]] bool isNoneState(const State &state) {
+    for (const auto &row: state.m)
+        for (const auto el: row)
+            if (el != 0)
+                return false;
+    return true;
+}
+
+[[nodiscard]] State getNoneState() {
+    return State{};
+}
+
 ///////////////////////////////////////// 4
 
 std::unordered_set<State> visited;
 
+State limitedDepthDFS(const State &state, int depth) {
+    if (isFinalState(state))
+        return state;
+    if (depth == 0)
+        return getNoneState();
+    visited.insert(state);
+    auto neighbours = getReachableStates(state);
+    for (const auto &it: neighbours)
+        if (!visited.contains(it)) {
+            auto res = limitedDepthDFS(it, depth - 1);
+            if (!isNoneState(res))
+                return res;
+        }
+    return getNoneState();
+}
+
+State IDDFS(const State &initState, int maxDepth) {
+    for (int depth = 0; depth < maxDepth; depth++) {
+        visited.clear();
+        auto sol = limitedDepthDFS(initState, depth);
+        if (!isNoneState(sol))
+            return sol;
+    }
+    return getNoneState();
+}
+
+void printSolutionForInstance(std::span<int, 9> instance) {
+    const static int MAX_DEPTH = 10'000;
+    auto initState =
+            getStateFromProblemInstance(instance);
+    auto solution = IDDFS(initState, MAX_DEPTH);
+    if (!isNoneState(solution))
+        printSolution(solution.m);
+    else std::cout << "Did not find solution\n";
+}
+
 int main() {
+    std::array instance1{8, 6, 7, 2, 5, 4, 0, 3, 1};
+    std::array instance2{2, 5, 3, 1, 0, 6, 4, 7, 8};
+    std::array instance3{2, 7, 5, 0, 8, 4, 3, 1, 6};
+
+    printSolutionForInstance(instance1);
+    printSolutionForInstance(instance2);
+    printSolutionForInstance(instance3);
 
 
     return 0;
