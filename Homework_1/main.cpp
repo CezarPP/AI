@@ -33,7 +33,7 @@ struct State {
         return result;
     }
 
-    void applyTransition(const Transition &T) {
+    constexpr void applyTransition(const Transition &T) {
         std::swap(m[T.from.first][T.from.second],
                   m[T.to.first][T.to.second]);
     }
@@ -56,7 +56,7 @@ namespace std {
 ///////////////////////////////////////// 2
 /// Initialization function, pass instance, get state
 
-[[nodiscard]] constexpr State getStateFromProblemInstance(const std::span<int, 9> instance) {
+[[nodiscard]] constexpr State getStateFromProblemInstance(const std::span<const int, 9> instance) {
     State state{.lastMoved{-1, -1}};
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
@@ -135,8 +135,8 @@ constexpr auto solutions = getFinalSolutions();
         for (int j = 0; j < 3; j++)
             if (s.m[i][j] == 0)
                 zeroPos = {i, j};
-    const std::array<int, 4> dx = {1, -1, 0, 0};
-    const std::array<int, 4> dy = {0, 0, 1, -1};
+    const std::array dx = {1, -1, 0, 0};
+    const std::array dy = {0, 0, 1, -1};
     for (int i = 0; i < 4; i++) {
         int newX = zeroPos.first + dx[i], newY = zeroPos.second + dy[i];
         auto transition = Transition{.from = zeroPos, .to = {newX, newY}};
@@ -146,27 +146,22 @@ constexpr auto solutions = getFinalSolutions();
     return v;
 }
 
-[[nodiscard]] bool isNoneState(const State &state) {
-    for (const auto &row: state.m)
-        for (const auto el: row)
-            if (el != 0)
-                return false;
-    return true;
-}
-
-[[nodiscard]] State getNoneState() {
-    return State{};
+[[nodiscard]] constexpr bool isNoneState(const State &state) noexcept {
+    if (state.lastMoved.first == 10)
+        return true;
+    return false;
 }
 
 ///////////////////////////////////////// 4
 
 std::unordered_set<State> visited;
+constexpr static auto noneState = State{.lastMoved{10, 10}};
 
-State limitedDepthDFS(const State &state, int depth) {
+[[nodiscard]] State limitedDepthDFS(const State &state, int depth) noexcept {
     if (isFinalState(state))
         return state;
     if (depth == 0)
-        return getNoneState();
+        return noneState;
     visited.insert(state);
     auto neighbours = getReachableStates(state);
     for (const auto &it: neighbours)
@@ -175,20 +170,20 @@ State limitedDepthDFS(const State &state, int depth) {
             if (!isNoneState(res))
                 return res;
         }
-    return getNoneState();
+    return noneState;
 }
 
-State IDDFS(const State &initState, int maxDepth) {
+[[nodiscard]] State IDDFS(const State &initState, int maxDepth) noexcept {
     for (int depth = 0; depth < maxDepth; depth++) {
         visited.clear();
         auto sol = limitedDepthDFS(initState, depth);
         if (!isNoneState(sol))
             return sol;
     }
-    return getNoneState();
+    return noneState;
 }
 
-void printSolutionForInstance(std::span<int, 9> instance) {
+void printSolutionForInstance(const std::span<const int, 9> instance) {
     const static int MAX_DEPTH = 10'000;
     auto initState =
             getStateFromProblemInstance(instance);
@@ -199,9 +194,9 @@ void printSolutionForInstance(std::span<int, 9> instance) {
 }
 
 int main() {
-    std::array instance1{8, 6, 7, 2, 5, 4, 0, 3, 1};
-    std::array instance2{2, 5, 3, 1, 0, 6, 4, 7, 8};
-    std::array instance3{2, 7, 5, 0, 8, 4, 3, 1, 6};
+    const std::array instance1{8, 6, 7, 2, 5, 4, 0, 3, 1};
+    const std::array instance2{2, 5, 3, 1, 0, 6, 4, 7, 8};
+    const std::array instance3{2, 7, 5, 0, 8, 4, 3, 1, 6};
 
     printSolutionForInstance(instance1);
     printSolutionForInstance(instance2);
