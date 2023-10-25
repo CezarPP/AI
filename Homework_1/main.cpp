@@ -1,63 +1,7 @@
 #include <bits/stdc++.h>
+#include "State.h"
 
 using namespace std;
-///////////////////////////////////////// 1
-/// Representation of the problem state
-
-struct Transition {
-    std::pair<int, int> from, to;
-};
-
-using matrix = std::array<std::array<int, 3>, 3>;
-
-// Boost::hash_combine
-template<typename T>
-constexpr void hash_combine(size_t &seed, T const &v) {
-    seed ^= std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-struct State {
-    matrix m;
-    std::pair<int, int> lastMoved;
-
-    [[nodiscard]] std::size_t hash() const {
-        std::size_t result = 0;
-
-        for (const auto &row: m)
-            for (const auto &value: row)
-                hash_combine(result, value);
-
-        hash_combine(result, lastMoved.first);
-        hash_combine(result, lastMoved.second);
-
-        return result;
-    }
-
-    constexpr void applyTransition(const Transition &T) {
-        std::swap(m[T.from.first][T.from.second],
-                  m[T.to.first][T.to.second]);
-    }
-
-    bool operator==(const State &rhs) const {
-        return m == rhs.m && lastMoved == rhs.lastMoved;
-    }
-
-    // Used for std::map
-    bool operator<(const State &rhs) const {
-        return (rhs.m < m);
-    }
-};
-
-// Define a custom function specialization in std for std::unordered_set to work
-namespace std {
-    template<>
-    struct hash<State> {
-        std::size_t operator()(const State &s) const {
-            return s.hash();
-        }
-    };
-}
-
 ///////////////////////////////////////// 2
 /// Initialization function, pass instance, get state
 
@@ -166,11 +110,10 @@ printFoundSolution(const tuple<State, vector<State>, int> &solutionTuple, const 
         cout << "Algorithm name " << name << '\n';
         cout << "Number of moves is " << moveSequence.size() << '\n';
         cout << "Elapsed time is " << time << "ms" << '\n';
-        printSolution(solution.m);
         if (moveSequence.size() < 10) {
             for (auto it: moveSequence)
                 printSolution(it.m);
-        }
+        } else printSolution(solution.m);
     } else std::cout << "Did not find solution\n";
 }
 
@@ -273,11 +216,16 @@ int getHammingDistanceFromFinalState(const matrix &state, const matrix &finalSta
     return dist;
 }
 
+template<typename Func>
+concept StateComparingFunction = std::is_invocable_v<Func, const State &, const State &> &&
+                                 std::is_same_v<std::invoke_result_t<Func, const State &, const State &>, bool>;
+
 // The final state, transitions and the execution length
+template<StateComparingFunction F>
 tuple<State, vector<State>, int>
-greedy(const State &initState, const function<bool(const State &, const State &)> &f) {
+greedy(const State &initState, const F &f) {
     auto start = chrono::high_resolution_clock::now();
-    priority_queue<State, vector<State>, decltype(f)> q(f);
+    priority_queue<State, vector<State>, F> q(f);
     q.push(initState);
     map<State, State> m; // distance from the initial state and previous state
     m[initState] = initState;
@@ -302,36 +250,92 @@ greedy(const State &initState, const function<bool(const State &, const State &)
     throw exception();
 }
 
+template<typename Func>
+concept MatrixDistanceF = std::is_invocable_v<Func, const matrix &, const matrix &> &&
+                          std::is_same_v<std::invoke_result_t<Func, const matrix &, const matrix &>, int>;
+
+template<typename Func>
+concept StateDistanceFromFinalF = std::is_invocable_v<Func, const State &> &&
+                                  std::is_same_v<std::invoke_result_t<Func, const State &>, int>;
+
+vector<State> getMoveSequenceAStar(map<State, pair<State, int>> &m, const State &crtState, const State &initState) {
+    vector<State> moves;
+    State state = crtState;
+    while (state != initState) {
+        moves.push_back(state);
+        state = m[state].first;
+    }
+    moves.push_back(initState);
+    std::reverse(moves.begin(), moves.end());
+    return moves;
+}
+
+// The final state, transitions and the execution length
+template<StateDistanceFromFinalF F>
+tuple<State, vector<State>, int>
+AStarAlgorithm(const State &initState, const F &f) {
+    auto start = chrono::high_resolution_clock::now();
+
+    map<State, pair<State, int>> m; // distance from the initial state and previous state
+    m[initState] = {initState, 0};
+
+    auto comparingFunction = [&m, &f](const State &state1, const State &state2) {
+        return f(state1) + m[state1].second > f(state2) + m[state2].second;
+    };
+
+    priority_queue<State, vector<State>, decltype(comparingFunction)> q(comparingFunction);
+    q.push(initState);
+
+    while (!q.empty()) {
+        auto state = q.top();
+        q.pop();
+        int crtDist = m[state].second;
+
+        if (isFinalState(state)) {
+            auto moveSequence = getMoveSequenceAStar(m, state, initState);
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+            return make_tuple(state, moveSequence, duration.count());
+        }
+        auto neighbours = getReachableStates(state);
+        for (const auto &it: neighbours)
+            if (!m.contains(it)) {
+                m[it] = {state, crtDist + 1};
+                q.push(it);
+            }
+    }
+    throw exception();
+}
+
+template<MatrixDistanceF F>
+auto makeStateComparer(F f) {
+    return [dist = f](const State &state1, const State &state2) -> bool {
+        int dist1 = 10000, dist2 = 10000;
+        for (const auto &it: solutions) {
+            dist1 = min(dist1, dist(state1.m, it));
+            dist2 = min(dist2, dist(state2.m, it));
+        }
+        return dist1 > dist2;
+    };
+}
+
+template<MatrixDistanceF F>
+auto makeDistanceFunction(F f) {
+    return [dist = f](const State &state1) -> int {
+        int dist1 = 10000;
+        for (const auto &it: solutions)
+            dist1 = min(dist1, dist(state1.m, it));
+        return dist1;
+    };
+}
+
 void printSolutionForGreedy(const std::span<const int, 9> instance) {
     auto initState =
             getStateFromProblemInstance(instance);
 
-    auto hamming = [](const State &state1, const State &state2) -> bool {
-        int dist1 = 10000, dist2 = 10000;
-        for (const auto &it: solutions) {
-            dist1 = min(dist1, getHammingDistanceFromFinalState(state1.m, it));
-            dist2 = min(dist2, getHammingDistanceFromFinalState(state2.m, it));
-        }
-        return dist1 > dist2;
-    };
-
-    auto euclidean = [](const State &state1, const State &state2) -> bool {
-        int dist1 = 10000, dist2 = 10000;
-        for (const auto &it: solutions) {
-            dist1 = min(dist1, getEuclideanDistanceFromFinalState(state1.m, it));
-            dist2 = min(dist2, getEuclideanDistanceFromFinalState(state2.m, it));
-        }
-        return dist1 > dist2;
-    };
-
-    auto manhattan = [](const State &state1, const State &state2) -> bool {
-        int dist1 = 10000, dist2 = 10000;
-        for (const auto &it: solutions) {
-            dist1 = min(dist1, getManhattanDistanceFromFinalState(state1.m, it));
-            dist2 = min(dist2, getManhattanDistanceFromFinalState(state2.m, it));
-        }
-        return dist1 > dist2;
-    };
+    auto hamming = makeStateComparer(getHammingDistanceFromFinalState);
+    auto euclidean = makeStateComparer(getEuclideanDistanceFromFinalState);
+    auto manhattan = makeStateComparer(getManhattanDistanceFromFinalState);
 
     auto solutionHamming = greedy(initState, hamming);
     printFoundSolution(solutionHamming, "Greedy Hamming distance");
@@ -341,6 +345,24 @@ void printSolutionForGreedy(const std::span<const int, 9> instance) {
 
     auto solutionManhattan = greedy(initState, manhattan);
     printFoundSolution(solutionManhattan, "Greedy Manhattan distance");
+}
+
+void printSolutionForAStar(const std::span<const int, 9> instance) {
+    auto initState =
+            getStateFromProblemInstance(instance);
+
+    auto hamming = makeDistanceFunction(getHammingDistanceFromFinalState);
+    auto euclidean = makeDistanceFunction(getEuclideanDistanceFromFinalState);
+    auto manhattan = makeDistanceFunction(getManhattanDistanceFromFinalState);
+
+    auto solutionHamming = AStarAlgorithm(initState, hamming);
+    printFoundSolution(solutionHamming, "A* Hamming distance");
+
+    auto solutionEuclidean = AStarAlgorithm(initState, euclidean);
+    printFoundSolution(solutionEuclidean, "A* Euclidean distance ");
+
+    auto solutionManhattan = AStarAlgorithm(initState, manhattan);
+    printFoundSolution(solutionManhattan, "A* Manhattan distance");
 }
 
 int main() {
@@ -360,5 +382,15 @@ int main() {
 
     printSolutionForGreedy(instance3);
     printSolutionForInstanceIDDFS(instance3);
+
+    cout << "////////////////////////////////////////////////////////\n";
+    printSolutionForAStar(instance1);
+
+    cout << "////////////////////////////////////////////////////////\n";
+    printSolutionForAStar(instance2);
+
+    cout << "////////////////////////////////////////////////////////\n";
+    printSolutionForAStar(instance3);
+
     return 0;
 }
