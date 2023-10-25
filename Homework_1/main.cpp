@@ -157,9 +157,39 @@ constexpr auto solutions = getFinalSolutions();
     return false;
 }
 
+
+///////////////////////////////////////// Helps print the solution
+void
+printFoundSolution(const tuple<State, vector<State>, int> &solutionTuple, const char *name) {
+    auto [solution, moveSequence, time] = solutionTuple;
+    if (!isNoneState(solution)) {
+        cout << "Algorithm name " << name << '\n';
+        cout << "Number of moves is " << moveSequence.size() << '\n';
+        cout << "Elapsed time is " << time << "ms" << '\n';
+        printSolution(solution.m);
+        if (moveSequence.size() < 10) {
+            for (auto it: moveSequence)
+                printSolution(it.m);
+        }
+    } else std::cout << "Did not find solution\n";
+}
+
+///////////////////////////////////////// Helps to reconstruct the path
+vector<State>
+getMoveSequence(map<State, State> &m, const State &crtState, const State &initState) {
+    vector<State> moves;
+    State state = crtState;
+    while (state != initState) {
+        moves.push_back(state);
+        state = m[state];
+    }
+    moves.push_back(initState);
+    std::reverse(moves.begin(), moves.end());
+    return moves;
+}
 ///////////////////////////////////////// 4
 
-std::unordered_set<State> visited;
+std::map<State, State> visited;
 constexpr static auto noneState = State{.lastMoved{10, 10}};
 
 [[nodiscard]] State limitedDepthDFS(const State &state, int depth) noexcept {
@@ -167,10 +197,10 @@ constexpr static auto noneState = State{.lastMoved{10, 10}};
         return state;
     if (depth == 0)
         return noneState;
-    visited.insert(state);
     auto neighbours = getReachableStates(state);
     for (const auto &it: neighbours)
         if (!visited.contains(it)) {
+            visited[it] = state;
             auto res = limitedDepthDFS(it, depth - 1);
             if (!isNoneState(res))
                 return res;
@@ -178,24 +208,45 @@ constexpr static auto noneState = State{.lastMoved{10, 10}};
     return noneState;
 }
 
-[[nodiscard]] State IDDFS(const State &initState, int maxDepth) noexcept {
+tuple<State, vector<State>, int>
+IDDFS(const State &initState, int maxDepth) {
+    auto start = chrono::high_resolution_clock::now();
     for (int depth = 0; depth < maxDepth; depth++) {
         visited.clear();
+        visited[initState] = initState;
         auto sol = limitedDepthDFS(initState, depth);
-        if (!isNoneState(sol))
-            return sol;
+
+        if (!isNoneState(sol)) {
+            auto moveSequence = getMoveSequence(visited, sol, initState);
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+            return make_tuple(sol, moveSequence, duration.count());
+        }
     }
-    return noneState;
+    throw exception();
 }
 
-void printSolutionForInstance(const std::span<const int, 9> instance) {
+void printSolutionForInstanceIDDFS(const std::span<const int, 9> instance) {
     const static int MAX_DEPTH = 10'000;
     auto initState =
             getStateFromProblemInstance(instance);
     auto solution = IDDFS(initState, MAX_DEPTH);
-    if (!isNoneState(solution))
-        printSolution(solution.m);
-    else std::cout << "Did not find solution\n";
+    printFoundSolution(solution, "IDDFS");
+}
+
+int getManhattanDistanceFromFinalState(const matrix &state, const matrix &finalState) {
+    pair<int, int> posFinal[9];
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            posFinal[finalState[i][j]] = {i, j};
+
+    int dist = 0;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+            auto pos = posFinal[state[i][j]];
+            dist = dist + abs(i - pos.first) + abs(j - pos.second);
+        }
+    return dist;
 }
 
 int getEuclideanDistanceFromFinalState(const matrix &state, const matrix &finalState) {
@@ -213,26 +264,13 @@ int getEuclideanDistanceFromFinalState(const matrix &state, const matrix &finalS
     return dist;
 }
 
-int getHammingDistanceFromFinal(const matrix &state, const matrix &finalState) {
+int getHammingDistanceFromFinalState(const matrix &state, const matrix &finalState) {
     int dist = 0;
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
             if (state[i][j] != finalState[i][j])
                 dist++;
     return dist;
-}
-
-vector<State>
-getMoveSequence(map<State, State> &m, const State &crtState, const State &initState) {
-    vector<State> moves;
-    State state = crtState;
-    while (state != initState) {
-        moves.push_back(state);
-        state = m[state];
-    }
-    moves.push_back(initState);
-    std::reverse(moves.begin(), moves.end());
-    return moves;
 }
 
 // The final state, transitions and the execution length
@@ -267,11 +305,12 @@ greedy(const State &initState, const function<bool(const State &, const State &)
 void printSolutionForGreedy(const std::span<const int, 9> instance) {
     auto initState =
             getStateFromProblemInstance(instance);
+
     auto hamming = [](const State &state1, const State &state2) -> bool {
         int dist1 = 10000, dist2 = 10000;
         for (const auto &it: solutions) {
-            dist1 = min(dist1, getHammingDistanceFromFinal(state1.m, it));
-            dist2 = min(dist2, getHammingDistanceFromFinal(state2.m, it));
+            dist1 = min(dist1, getHammingDistanceFromFinalState(state1.m, it));
+            dist2 = min(dist2, getHammingDistanceFromFinalState(state2.m, it));
         }
         return dist1 > dist2;
     };
@@ -285,17 +324,23 @@ void printSolutionForGreedy(const std::span<const int, 9> instance) {
         return dist1 > dist2;
     };
 
-    auto solutionTuple = greedy(initState, hamming);
-    auto [solution, moveSequence, time] = solutionTuple;
-    if (!isNoneState(solution)) {
-        cout << "Number of moves is " << moveSequence.size() << '\n';
-        cout << "Elapsed time is " << time << "ms" << '\n';
-        printSolution(solution.m);
-        if (moveSequence.size() < 10) {
-            for (auto it: moveSequence)
-                printSolution(it.m);
+    auto manhattan = [](const State &state1, const State &state2) -> bool {
+        int dist1 = 10000, dist2 = 10000;
+        for (const auto &it: solutions) {
+            dist1 = min(dist1, getManhattanDistanceFromFinalState(state1.m, it));
+            dist2 = min(dist2, getManhattanDistanceFromFinalState(state2.m, it));
         }
-    } else std::cout << "Did not find solution\n";
+        return dist1 > dist2;
+    };
+
+    auto solutionHamming = greedy(initState, hamming);
+    printFoundSolution(solutionHamming, "Greedy Hamming distance");
+
+    auto solutionEuclidean = greedy(initState, euclidean);
+    printFoundSolution(solutionEuclidean, "Greedy Euclidean distance ");
+
+    auto solutionManhattan = greedy(initState, manhattan);
+    printFoundSolution(solutionManhattan, "Greedy Manhattan distance");
 }
 
 int main() {
@@ -304,12 +349,16 @@ int main() {
     const std::array instance3{2, 7, 5, 0, 8, 4, 3, 1, 6};
 
     printSolutionForGreedy(instance1);
+    printSolutionForInstanceIDDFS(instance1);
+
+    cout << "////////////////////////////////////////////////////////\n";
+
     printSolutionForGreedy(instance2);
+    printSolutionForInstanceIDDFS(instance2);
+
+    cout << "////////////////////////////////////////////////////////\n";
+
     printSolutionForGreedy(instance3);
-    // printSolutionForInstance(instance1);
-    // printSolutionForInstance(instance2);
-    // printSolutionForInstance(instance3);
-
-
+    printSolutionForInstanceIDDFS(instance3);
     return 0;
 }
