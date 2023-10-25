@@ -1,6 +1,6 @@
 #include <bits/stdc++.h>
 
-
+using namespace std;
 ///////////////////////////////////////// 1
 /// Representation of the problem state
 
@@ -40,6 +40,11 @@ struct State {
 
     bool operator==(const State &rhs) const {
         return m == rhs.m && lastMoved == rhs.lastMoved;
+    }
+
+    // Used for std::map
+    bool operator<(const State &rhs) const {
+        return (rhs.m < m);
     }
 };
 
@@ -193,14 +198,117 @@ void printSolutionForInstance(const std::span<const int, 9> instance) {
     else std::cout << "Did not find solution\n";
 }
 
+int getEuclideanDistanceFromFinalState(const matrix &state, const matrix &finalState) {
+    pair<int, int> posFinal[9];
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            posFinal[finalState[i][j]] = {i, j};
+    int dist = 0;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+            auto pos = posFinal[state[i][j]];
+            dist += (i - pos.first) * (i - pos.first)
+                    + (j - pos.second) * (j - pos.second);
+        }
+    return dist;
+}
+
+int getHammingDistanceFromFinal(const matrix &state, const matrix &finalState) {
+    int dist = 0;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            if (state[i][j] != finalState[i][j])
+                dist++;
+    return dist;
+}
+
+vector<State>
+getMoveSequence(map<State, State> &m, const State &crtState, const State &initState) {
+    vector<State> moves;
+    State state = crtState;
+    while (state != initState) {
+        moves.push_back(state);
+        state = m[state];
+    }
+    moves.push_back(initState);
+    std::reverse(moves.begin(), moves.end());
+    return moves;
+}
+
+// The final state, transitions and the execution length
+tuple<State, vector<State>, int>
+greedy(const State &initState, const function<bool(const State &, const State &)> &f) {
+    auto start = chrono::high_resolution_clock::now();
+    priority_queue<State, vector<State>, decltype(f)> q(f);
+    q.push(initState);
+    map<State, State> m; // distance from the initial state and previous state
+    m[initState] = initState;
+
+    while (!q.empty()) {
+        auto state = q.top();
+        q.pop();
+
+        if (isFinalState(state)) {
+            auto moveSequence = getMoveSequence(m, state, initState);
+            auto stop = chrono::high_resolution_clock::now();
+            auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+            return make_tuple(state, moveSequence, duration.count());
+        }
+        auto neighbours = getReachableStates(state);
+        for (const auto &it: neighbours)
+            if (!m.contains(it)) {
+                m[it] = state;
+                q.push(it);
+            }
+    }
+    throw exception();
+}
+
+void printSolutionForGreedy(const std::span<const int, 9> instance) {
+    auto initState =
+            getStateFromProblemInstance(instance);
+    auto hamming = [](const State &state1, const State &state2) -> bool {
+        int dist1 = 10000, dist2 = 10000;
+        for (const auto &it: solutions) {
+            dist1 = min(dist1, getHammingDistanceFromFinal(state1.m, it));
+            dist2 = min(dist2, getHammingDistanceFromFinal(state2.m, it));
+        }
+        return dist1 > dist2;
+    };
+
+    auto euclidean = [](const State &state1, const State &state2) -> bool {
+        int dist1 = 10000, dist2 = 10000;
+        for (const auto &it: solutions) {
+            dist1 = min(dist1, getEuclideanDistanceFromFinalState(state1.m, it));
+            dist2 = min(dist2, getEuclideanDistanceFromFinalState(state2.m, it));
+        }
+        return dist1 > dist2;
+    };
+
+    auto solutionTuple = greedy(initState, hamming);
+    auto [solution, moveSequence, time] = solutionTuple;
+    if (!isNoneState(solution)) {
+        cout << "Number of moves is " << moveSequence.size() << '\n';
+        cout << "Elapsed time is " << time << "ms" << '\n';
+        printSolution(solution.m);
+        if (moveSequence.size() < 10) {
+            for (auto it: moveSequence)
+                printSolution(it.m);
+        }
+    } else std::cout << "Did not find solution\n";
+}
+
 int main() {
     const std::array instance1{8, 6, 7, 2, 5, 4, 0, 3, 1};
     const std::array instance2{2, 5, 3, 1, 0, 6, 4, 7, 8};
     const std::array instance3{2, 7, 5, 0, 8, 4, 3, 1, 6};
 
-    printSolutionForInstance(instance1);
-    printSolutionForInstance(instance2);
-    printSolutionForInstance(instance3);
+    printSolutionForGreedy(instance1);
+    printSolutionForGreedy(instance2);
+    printSolutionForGreedy(instance3);
+    // printSolutionForInstance(instance1);
+    // printSolutionForInstance(instance2);
+    // printSolutionForInstance(instance3);
 
 
     return 0;
