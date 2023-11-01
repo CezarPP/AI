@@ -52,6 +52,7 @@ void printSolution(Assignment assignment) {
 
 int main() {
     Assignment instance = getInstanceFromFile();
+    instance.forceArcConsistency();
     printSolution(instance);
 
 

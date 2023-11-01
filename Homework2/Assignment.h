@@ -145,6 +145,41 @@ struct Assignment {
         s.pop();
     }
 
+    static bool areLinked(const pair<int, int> &a, const pair<int, int> &b) {
+        return (a.first == b.first || a.second == b.second || getSquareFromCell(a) == getSquareFromCell(b));
+    }
+
+    void forceArcConsistency() {
+        queue<pair<pair<int, int>, pair<int, int>>> q;
+
+        //using only empty cells
+        for (auto it1: emptyCells)
+            for (auto it2: emptyCells)
+                if (it1 != it2 && areLinked(it1, it2))
+                    q.emplace(it1, it2);
+
+        while (!q.empty()) {
+            auto [x, y] = q.front();
+            q.pop();
+
+            bool ok = true;
+            for (auto itr = domains[x.first][x.second].cbegin(); itr!=domains[x.first][x.second].cend();)
+                if (domains[y.first][y.second].size() == 1 && domains[y.first][y.second].contains(*itr)) {
+                    ok = false;
+                    itr = domains[x.first][x.second].erase(itr);
+                }
+                else
+                    ++itr;
+
+            if (!ok) {
+                for (auto z: emptyCells) {
+                    if (z != x && areLinked(z, x))
+                        q.emplace(z, x);
+                }
+            }
+        }
+    }
+
     friend ostream &operator<<(ostream &os, const Assignment &assignment) {
         for (int i = 1; i <= 9; i++) {
             for (int j = 1; j <= 9; j++) {
