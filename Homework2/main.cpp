@@ -27,12 +27,14 @@ optional<Assignment> bkt(Assignment &assignment) {
         return assignment;
 
     auto var = assignment.nextUnassignedVariable();
-    for (auto value: assignment.getDomainOfVariable(var))
+    for (auto value: assignment.getDomain(var))
         if (assignment.isConsistent(var, value)) {
             assignment.addValue(var, value);
-            auto res = bkt(assignment);
-            if (res.has_value())
-                return res;
+            if (assignment.shouldContinue()) {
+                auto res = bkt(assignment);
+                if (res.has_value())
+                    return res;
+            }
             assignment.rollback();
         }
 
@@ -49,7 +51,7 @@ void printSolution(Assignment assignment) {
 
 
 int main() {
-    auto instance = getInstanceFromFile();
+    Assignment instance = getInstanceFromFile();
     printSolution(instance);
 
 
