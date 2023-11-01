@@ -113,19 +113,22 @@ struct Assignment {
         return {squareRow, squareCol};
     }
 
+    void recalculateDomainForCell(const pair<int, int> &p) {
+        auto [i, j] = p;
+        if (!table[i][j])
+            domains[i][j] = getFreeValues(p);
+    }
+
     void updateConcernedDomains(const pair<int, int> &p) {
         for (int i = 1; i <= 9; i++) {
-            if (!table[i][p.second])
-                domains[i][p.second] = getFreeValues({i, p.second});
-            if (!table[p.first][i])
-                domains[p.first][i] = getFreeValues({p.first, i});
+            recalculateDomainForCell({i, p.second});
+            recalculateDomainForCell({p.first, i});
         }
 
         auto sq = getSquareFromCell(p);
         for (int i = sq.first + 1; i <= sq.first + 3; i++)
             for (int j = sq.second + 1; j <= sq.second + 3; j++)
-                if (!table[i][j])
-                    domains[i][j] = getFreeValues({i, j});
+                recalculateDomainForCell({i, j});
     }
 
     void addValue(const pair<int, int> &p, int value) {
