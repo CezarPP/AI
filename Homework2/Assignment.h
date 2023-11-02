@@ -95,16 +95,8 @@ struct Assignment {
     }
 
     [[nodiscard]] bool isConsistent(const pair<int, int> &var, int value) const {
-        // check domain
-        auto dom = getDomain(var);
-        if (dom.find(value) == dom.end())
-            return false;
-
-        auto freeLineCol = getFreeValuesOnLinesAndColumns(var);
-        auto freeSquare = getFreeValuesInSquare(var);
-
-        return ranges::find(freeLineCol, value) != freeLineCol.end() &&
-               ranges::find(freeSquare, value) != freeSquare.end();
+        auto domain = getFreeValues(var);
+        return ranges::find(domain, value) != domain.end();
     }
 
     [[nodiscard]] static pair<int, int> getSquareFromCell(const pair<int, int> &p) {
@@ -163,28 +155,25 @@ struct Assignment {
             q.pop();
 
             bool ok = true;
-            for (auto itr = domains[x.first][x.second].cbegin(); itr!=domains[x.first][x.second].cend();)
+            for (auto itr = domains[x.first][x.second].cbegin(); itr != domains[x.first][x.second].cend();)
                 if (domains[y.first][y.second].size() == 1 && domains[y.first][y.second].contains(*itr)) {
                     ok = false;
                     itr = domains[x.first][x.second].erase(itr);
-                }
-                else
+                } else
                     ++itr;
 
             if (!ok) {
-                for (auto z: emptyCells) {
+                for (auto z: emptyCells)
                     if (z != x && areLinked(z, x))
                         q.emplace(z, x);
-                }
             }
         }
     }
 
     friend ostream &operator<<(ostream &os, const Assignment &assignment) {
         for (int i = 1; i <= 9; i++) {
-            for (int j = 1; j <= 9; j++) {
+            for (int j = 1; j <= 9; j++)
                 os << assignment.table[i][j] << ' ';
-            }
             os << '\n';
         }
         return os;
