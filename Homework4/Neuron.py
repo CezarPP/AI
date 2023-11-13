@@ -1,0 +1,1 @@
+# will have a activation funtion and weights
