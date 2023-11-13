@@ -1,1 +1,1 @@
-# will have derivative + normal
+# will have derivative + normal -> this is for random layer

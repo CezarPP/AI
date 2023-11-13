@@ -2,6 +2,7 @@ import numpy as np
 import re
 
 
+
 def prepare_data():
     file_path = "seeds_dataset.txt"
     with open(file_path, 'r') as file:
@@ -32,7 +33,18 @@ def prepare_data():
 def main():
     input_data, input_label, validation_data, validation_label = prepare_data()
     print(input_data)
+    # neuralNetwork = NeuralNetwork(1, [7])
 
 
 if __name__ == "__main__":
     main()
+
+    nimic = np.array([1, 2, 3])
+
+    altnimic = np.array([[1, 2], [1, 2], [1, 2]])
+
+    print(nimic.shape)
+    print(altnimic.shape)
+    a = np.dot(nimic, altnimic)
+    print(a)
+    print(a.shape)
