@@ -1,6 +1,6 @@
 import numpy as np
 import re
-
+from neural_network import NeuralNetwork
 
 
 def prepare_data():
@@ -19,7 +19,7 @@ def prepare_data():
 
     # 2/3 - input size
     np_parsed_data = np.array(parsed_data)
-    np.random.permutation(np_parsed_data)
+    np.random.shuffle(np_parsed_data)
 
     input_data = np_parsed_data[:140, :-1]
     input_label = np_parsed_data[:140, -1]
@@ -32,10 +32,13 @@ def prepare_data():
 
 def main():
     input_data, input_label, validation_data, validation_label = prepare_data()
-    print(input_data)
-    # neuralNetwork = NeuralNetwork(1, [7])
+
+    nn = NeuralNetwork([7])
+    nn.train(input_data, input_label, 0.05, 1000)
+    nn.test(validation_data, validation_label)
 
 
 if __name__ == "__main__":
     main()
+
 
