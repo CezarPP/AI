@@ -73,6 +73,7 @@ class NeuralNetwork:
 
                 # aici ar trebui computati gradientii pt ultim layer
                 self.layers[-1].gradients =  true_probability - output
+                self.layers[-1].add_to_deltas(alfa)
 
                 for index in range(len(self.layers) - 2, -1, -1):
                     self.layers[index].compute_gradients(self.layers[index+1].w, self.layers[index+1].gradients)
