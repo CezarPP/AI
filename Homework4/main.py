@@ -39,12 +39,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-    nimic = np.array([1, 2, 3])
-
-    altnimic = np.array([[1, 2], [1, 2], [1, 2]])
-
-    print(nimic.shape)
-    print(altnimic.shape)
-    a = np.dot(nimic, altnimic)
-    print(a)
-    print(a.shape)
