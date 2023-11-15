@@ -15,3 +15,11 @@ def relu(x):
 
 def relu_derivative(x):
     return np.where(x > 0, 1, 0)
+
+
+def softmax(x):
+    return np.exp(x) / np.sum(np.exp(x))
+
+
+def softmax_derivative(x):
+    return 0

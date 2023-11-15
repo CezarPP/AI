@@ -1,4 +1,4 @@
-import numpy as np
+from activation_functions import *
 from my_neuron import NeuronLayer
 
 
@@ -14,24 +14,6 @@ def cross_entropy(output, true_probability):
     output = np.clip(output, epsilon, 1 - epsilon)
     error = -np.sum(true_probability * np.log(output))
     return error
-
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
-def sigmoid_derivative(x):
-    sigmoid_x = sigmoid(x)
-    return sigmoid_x * (1 - sigmoid_x)
-
-
-def softmax(x):
-    return np.exp(x) / np.sum(np.exp(x))
-
-
-# i do not need this
-def softmax_derivative(x):
-    return 0
 
 
 def min_max_scaling(data):
@@ -53,7 +35,7 @@ class NeuralNetwork:
         # initialize last layer
         self.layers.append(NeuronLayer(prev, 3, softmax, softmax_derivative))
 
-    def evaluate(self, data): # feed forward step
+    def evaluate(self, data):  # feed forward step
         output = np.copy(data)
         for layer in self.layers:
             output = layer.compute_value(output)
@@ -76,13 +58,13 @@ class NeuralNetwork:
                 self.layers[-1].add_to_deltas(alfa)
 
                 for index in range(len(self.layers) - 2, -1, -1):
-                    self.layers[index].compute_gradients(self.layers[index+1].w, self.layers[index+1].gradients)
+                    self.layers[index].compute_gradients(self.layers[index + 1].w, self.layers[index + 1].gradients)
                     self.layers[index].add_to_deltas(alfa)
 
                 for layer in self.layers:
                     layer.add_deltas()
 
-            print(sum(loss)/len(loss))
+            print(sum(loss) / len(loss))
 
     def test(self, validation_data, validation_label):
         good_predictions = 0
@@ -92,4 +74,4 @@ class NeuralNetwork:
             index = np.argmax(output) + 1
             if index == label:
                 good_predictions += 1
-        print(f"{good_predictions/len(validation_data) * 100}%")
+        print(f"{good_predictions / len(validation_data) * 100}%")
