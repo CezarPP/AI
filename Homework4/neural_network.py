@@ -41,8 +41,10 @@ class NeuralNetwork:
             output = layer.compute_value(output)
         return output
 
-    # the last function will be softMax
+    # The last function will be softMax
+    # Returns the summed error for each epoch
     def train(self, input_data, input_label, alfa, epochs):
+        error_for_epoch = []
         for _ in range(epochs):
             loss = []
             for data, label in zip(input_data, input_label):
@@ -64,14 +66,20 @@ class NeuralNetwork:
                 for layer in self.layers:
                     layer.add_deltas()
 
-            print(sum(loss) / len(loss))
+            error_for_epoch.append(sum(loss))
+            # print(sum(loss) / len(loss))
+        return error_for_epoch
 
+    # Returns the predicted labels
     def test(self, validation_data, validation_label):
         good_predictions = 0
+        predicted = []
         for data, label in zip(validation_data, validation_label):
             scaled_data = min_max_scaling(data)
             output = self.evaluate(scaled_data)
             index = np.argmax(output) + 1
+            predicted.append(index)
             if index == label:
                 good_predictions += 1
         print(f"{good_predictions / len(validation_data) * 100}%")
+        return predicted

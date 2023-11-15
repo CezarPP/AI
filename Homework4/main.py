@@ -1,6 +1,7 @@
 import numpy as np
 import re
 from neural_network import NeuralNetwork
+from visualizer import *
 
 
 def prepare_data():
@@ -15,7 +16,7 @@ def prepare_data():
         parsed_data.append([float(val) for val in values])
 
     # input dataset, validation dataset
-    print(len(parsed_data))
+    print("Length of parsed data is " + str(len(parsed_data)))
 
     # 2/3 - input size
     np_parsed_data = np.array(parsed_data)
@@ -34,11 +35,11 @@ def main():
     input_data, input_label, validation_data, validation_label = prepare_data()
 
     nn = NeuralNetwork([7])
-    nn.train(input_data, input_label, 0.05, 1000)
-    nn.test(validation_data, validation_label)
+    error_for_epoch = nn.train(input_data, input_label, 0.05, 1000)
+    predicted = nn.test(validation_data, validation_label)
+    plot_for_each_epoch(error_for_epoch, "Training Convergence")
+    plot_misclassified_two_dimensions(validation_data, validation_label, predicted)
 
 
 if __name__ == "__main__":
     main()
-
-
