@@ -69,21 +69,19 @@ class NeuralNetwork:
 
                 output = self.evaluate(scaled_data)
                 true_probability = probability(label)
-                loss.append(cross_entropy(output, true_probability)) # loss average should pe plotted, maybe
+                loss.append(cross_entropy(output, true_probability))  # loss average should pe plotted, maybe
 
-                # aici ar trebui computati gradientii pt ultim layer
-                self.layers[-1].gradients =  true_probability - output
+                # compute gradients for last error
+                self.layers[-1].gradients = true_probability - output
                 self.layers[-1].add_to_deltas(alfa)
 
                 for index in range(len(self.layers) - 2, -1, -1):
                     self.layers[index].compute_gradients(self.layers[index+1].w, self.layers[index+1].gradients)
                     self.layers[index].add_to_deltas(alfa)
 
-                    # ceva cu gradientii mei in functioe de weight-urile si gradientii lui urmatorul
-                    # ceva cu delta_w si delta_b in funtie de alfa, inputul meu si gradientii
-
                 for layer in self.layers:
                     layer.add_deltas()
+
             print(sum(loss)/len(loss))
 
     def test(self, validation_data, validation_label):

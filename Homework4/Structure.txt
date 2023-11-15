@@ -1,0 +1,11 @@
+Input layer: 7 inputs
+Output layer: 3 neurons
+Hidden layers: the number of layers and the size of layers can be set by user in __init__. Good results 1 layer 7 neurons
+Activation functions:
+    Hidden Layers - sigmoid
+    Output Layer  - softmax
+Error function: cross entropy
+Input scaling: min-max scaling
+Weight initialization: np.random.randn - random numbers from normal distribution (mean=0, sd=1)
+
+Online training
